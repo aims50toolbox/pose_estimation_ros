@@ -84,7 +84,7 @@ class SAMSegmentEstimator(estimator.Estimator):
 
         log.info(f'Found {len(boxes)} bottles, selecting id = {id}')
 
-        xyxy = boxes[id].xyxy.numpy().astype(np.uint32).flatten()
+        xyxy = boxes[id].xyxy.cpu().numpy().astype(np.uint32).flatten()
         hslice = slice(xyxy[1],xyxy[3])
         wslice = slice(xyxy[0],xyxy[2])
 
@@ -97,7 +97,7 @@ class SAMSegmentEstimator(estimator.Estimator):
             log.warn('Segmentation failed')
             return None, None
 
-        mask = sam_result.masks[0].data.numpy()
+        mask = sam_result.masks[0].data.cpu().numpy()
 
         # create point cloud
         pts = cv2.rgbd.depthTo3d(depth_img, Kdepth)

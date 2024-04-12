@@ -15,7 +15,8 @@ RUN apt update && \
         ros-humble-ros-base \
         ros-humble-rviz2 \
         python3-colcon-common-extensions \
-        libgl-dev
+        libgl-dev \
+     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
