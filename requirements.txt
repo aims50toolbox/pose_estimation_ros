@@ -1,0 +1,7 @@
+ultralytics
+open3d
+opencv-python
+opencv-contrib-python
+numpy
+rosbags
+pyyaml
