@@ -10,6 +10,7 @@ from ultralytics import RTDETR
 from ultralytics import SAM
 import copy
 import sensor_msgs.msg as msgs
+from timeit import default_timer as timer
 
 
 def PCDToMessage(header,pts,clr):
@@ -65,6 +66,8 @@ class SAMSegmentEstimator(estimator.Estimator):
 
 
     def estimate(self, color_msg, depth_msg, camera_msg):
+        measureit_estimate = self.measureit('SAMSegmentEstimator')
+
         log = self.get_logger()
         log.info('Run estimation')
 
@@ -98,6 +101,8 @@ class SAMSegmentEstimator(estimator.Estimator):
             return None, None
 
         mask = sam_result.masks[0].data.cpu().numpy()
+
+        measureit_pcd = self.measureit("pointcloud matching")
 
         # create point cloud
         pts = cv2.rgbd.depthTo3d(depth_img, Kdepth)
@@ -147,6 +152,8 @@ class SAMSegmentEstimator(estimator.Estimator):
 
         pcd_msg = PCDToMessage(color_msg.header, pcd_points, pcd_colors)
 
+        measureit_pcd.end()
+        measureit_estimate.end()
 
         return diag_img_msg, pcd_msg
 
