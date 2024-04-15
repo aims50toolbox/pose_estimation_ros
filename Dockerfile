@@ -29,6 +29,7 @@ COPY src ros_ws/src
 WORKDIR /root/ros_ws
 RUN /bin/bash -c "source /opt/ros/humble/setup.sh && colcon build"
 
+COPY *.pt .
 COPY start.sh .
 
 CMD ["/bin/bash", "start.sh"]

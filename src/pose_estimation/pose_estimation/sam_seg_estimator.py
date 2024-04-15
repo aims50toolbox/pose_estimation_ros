@@ -13,38 +13,6 @@ import sensor_msgs.msg as msgs
 from timeit import default_timer as timer
 
 
-def PCDToMessage(header,pts,clr):
-    print(f'pts: {pts.shape}, clr: {clr.shape}')
-
-    shape = clr.shape
-    clr = np.concatenate([clr,np.zeros((*shape[0:-1],1),dtype=np.uint8)],axis=-1)
-    clr = np.frombuffer(clr.tobytes(),dtype=np.float32)
-    clr = clr.reshape((*shape[0:-1],1))
-    np.concatenate([pts,clr],axis=-1)
-
-    pcd_msg = msgs.PointCloud2()
-    pcd_msg.header = copy.deepcopy(header)
-    if len(pts.shape) == 3:
-        pcd_msg.height = pts.shape[0]
-        pcd_msg.width = pts.shape[1]
-    else:
-        pcd_msg.height = 1
-        pcd_msg.width = pts.shape[0]
-    
-    pcd_msg.is_bigendian = False
-    pcd_msg.point_step = 16
-    pcd_msg.row_step = pcd_msg.point_step * pcd_msg.width
-    pcd_msg.is_dense = False
-    pcd_msg.fields = [
-        msgs.PointField(name = 'x', offset = 0, datatype = 7, count = 1),
-        msgs.PointField(name = 'y', offset = 4, datatype = 7, count = 1),
-        msgs.PointField(name = 'z', offset = 8, datatype = 7, count = 1),
-        msgs.PointField(name = 'rgb', offset = 12, datatype = 7, count = 1)
-    ]
-    pcd_msg.data = list(np.concatenate([pts,clr],axis=-1).flatten().tobytes())
-
-    return pcd_msg
-
 
 class SAMSegmentEstimator(estimator.Estimator):
     def __init__(self,logger,config):
@@ -64,9 +32,21 @@ class SAMSegmentEstimator(estimator.Estimator):
 
         logger.info('Estimator is ready')
 
+    def get_diag_img(self):
+        return self.diag_img
+
+    def get_diag_pcd(self):
+        if self.diag_pcd is None:
+            return None
+        
+        return self.diag_pcd,self.diag_pcd_col
 
     def estimate(self, color_msg, depth_msg, camera_msg):
         measureit_estimate = self.measureit('SAMSegmentEstimator')
+
+        self.diag_img = None
+        self.diag_pcd = None
+        self.diag_pcd_col = None
 
         log = self.get_logger()
         log.info('Run estimation')
@@ -93,8 +73,7 @@ class SAMSegmentEstimator(estimator.Estimator):
 
         sam_result = self.seg_model.predict(color_img, bboxes = xyxy.astype(np.int32))[0]
 
-        diag_img_msg = copy.deepcopy(color_msg)
-        diag_img_msg.data = sam_result.plot().flatten().tolist()
+        self.diag_img = sam_result.plot()
  
         if len(sam_result.masks) == 0:
             log.warn('Segmentation failed')
@@ -141,20 +120,17 @@ class SAMSegmentEstimator(estimator.Estimator):
         print("")
 
         tvec = reg_p2p.transformation[0:3,3]
-        rvec,_ = cv2.Rodrigues(reg_p2p.transformation[0:3,0:3])
-        rvec = rvec.T[0,:]
+        rvec = reg_p2p.transformation[0:3,0:3]
 
         ref_pcd_temp = copy.deepcopy(self.ref_pcd)
         ref_pcd_temp.transform(reg_p2p.transformation)
 
-        pcd_points = np.concatenate([verts,np.asarray(ref_pcd_temp.points,dtype=np.float32)])
-        pcd_colors = np.concatenate([color,(np.asarray(ref_pcd_temp.colors) * 255).astype(np.uint8) ])
-
-        pcd_msg = PCDToMessage(color_msg.header, pcd_points, pcd_colors)
+        self.diag_pcd = np.concatenate([verts,np.asarray(ref_pcd_temp.points,dtype=np.float32)])
+        self.diag_pcd_col = np.concatenate([color,(np.asarray(ref_pcd_temp.colors) * 255).astype(np.uint8) ])
 
         measureit_pcd.end()
         measureit_estimate.end()
 
-        return diag_img_msg, pcd_msg
+        return rvec,tvec
 
 

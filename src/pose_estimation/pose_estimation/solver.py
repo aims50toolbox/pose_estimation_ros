@@ -6,8 +6,43 @@ import collections
 import rtdetr_det_estimator
 import sam_seg_estimator
 import yaml
+import copy
 import sys
 import pe_interface.msg as pe_msgs
+import numpy as np
+
+def PCDToMessage(header,pts,clr):
+    print(f'pts: {pts.shape}, clr: {clr.shape}')
+
+    shape = clr.shape
+    clr = np.concatenate([clr,np.zeros((*shape[0:-1],1),dtype=np.uint8)],axis=-1)
+    clr = np.frombuffer(clr.tobytes(),dtype=np.float32)
+    clr = clr.reshape((*shape[0:-1],1))
+    np.concatenate([pts,clr],axis=-1)
+
+    pcd_msg = msgs.PointCloud2()
+    pcd_msg.header = copy.deepcopy(header)
+    if len(pts.shape) == 3:
+        pcd_msg.height = pts.shape[0]
+        pcd_msg.width = pts.shape[1]
+    else:
+        pcd_msg.height = 1
+        pcd_msg.width = pts.shape[0]
+    
+    pcd_msg.is_bigendian = False
+    pcd_msg.point_step = 16
+    pcd_msg.row_step = pcd_msg.point_step * pcd_msg.width
+    pcd_msg.is_dense = False
+    pcd_msg.fields = [
+        msgs.PointField(name = 'x', offset = 0, datatype = 7, count = 1),
+        msgs.PointField(name = 'y', offset = 4, datatype = 7, count = 1),
+        msgs.PointField(name = 'z', offset = 8, datatype = 7, count = 1),
+        msgs.PointField(name = 'rgb', offset = 12, datatype = 7, count = 1)
+    ]
+    pcd_msg.data = list(np.concatenate([pts,clr],axis=-1).flatten().tobytes())
+
+    return pcd_msg
+
 
 class SolverSubscriber(Node):
     def __init__(self, config, estimator):
@@ -34,6 +69,7 @@ class SolverSubscriber(Node):
         
         self.diag_image_publisher = self.create_publisher(msgs.Image,'/pose_estimation/diag/image', 10)
         self.diag_pcd_publisher = self.create_publisher(msgs.PointCloud2,'/pose_estimation/diag/points', 10)
+        self.pose_result = self.create_publisher(pe_msgs.Pose,'/pose_estimation/pose',10)
 
         self.data = collections.OrderedDict()
 
@@ -73,19 +109,32 @@ class SolverSubscriber(Node):
     def data_ready_callback(self, ts, d):
         self.get_logger().info(f'Data is ready: {ts},{len(d)}')
 
-        diag_image_msg, pcd_msg = self.estimator.estimate(d['color'], d['depth'], d['ci'])
+        r,t = self.estimator.estimate(d['color'], d['depth'], d['ci'])
 
-        if diag_image_msg is not None:
-            self.diag_image_publisher.publish(diag_image_msg)
-            self.diag_pcd_publisher.publish(pcd_msg)
+        if self.estimator.get_diag_img() is not None:
+            msg = copy.deepcopy(d['color'])
+            msg.data = self.estimator.get_diag_img().flatten().tolist()
+            self.diag_image_publisher.publish(msg)
+        
+        if self.estimator.get_diag_pcd() is not None:
+            pcd,pcd_col = self.estimator.get_diag_pcd()
+            msg = self.diag_pcd = PCDToMessage(d['color'].header, pcd, pcd_col)
+            self.diag_pcd_publisher.publish(msg)
+
+        if r is not None:
+            print(f'R: {r.flatten().tolist()}; t: {t.tolist()}')
+
+            msg = pe_msgs.Pose()
+            msg.header = copy.deepcopy(d['color'].header)
+            msg.r = r.flatten().tolist()
+            msg.t = t.tolist()
+   
+            self.pose_result.publish(msg)
 
     
 
 def main(args = None):
     rclpy.init(args=args)
-
-    mypose = pe_msgs.Pose()
-    print(mypose)
 
     if len(sys.argv) < 2:
         print('Provide config.yaml path!')

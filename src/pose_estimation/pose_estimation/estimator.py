@@ -28,3 +28,11 @@ class Estimator(abc.ABC):
     @abc.abstractmethod
     def estimate(self, color_msg, depth_msg, camera_msg):
         pass
+
+    @abc.abstractmethod
+    def get_diag_img(self):
+        pass
+
+    @abc.abstractmethod
+    def get_diag_pcd(self):
+        pass
