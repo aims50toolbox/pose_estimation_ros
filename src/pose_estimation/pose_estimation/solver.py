@@ -7,6 +7,7 @@ import rtdetr_det_estimator
 import sam_seg_estimator
 import yaml
 import sys
+import pe_interface.msg as pe_msgs
 
 class SolverSubscriber(Node):
     def __init__(self, config, estimator):
@@ -82,6 +83,9 @@ class SolverSubscriber(Node):
 
 def main(args = None):
     rclpy.init(args=args)
+
+    mypose = pe_msgs.Pose()
+    print(mypose)
 
     if len(sys.argv) < 2:
         print('Provide config.yaml path!')

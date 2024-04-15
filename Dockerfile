@@ -24,10 +24,10 @@ RUN pip3 install -r requirements.txt
 RUN echo ". /opt/ros/humble/setup.bash" >> /root/.bashrc
 
 RUN mkdir -p ros_ws/src
-COPY pose_estimation/ ros_ws/src/
+COPY src ros_ws/src
 
 WORKDIR /root/ros_ws
-RUN colcon build
+RUN /bin/bash -c "source /opt/ros/humble/setup.sh && colcon build"
 
 COPY start.sh .
 
