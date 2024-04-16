@@ -61,7 +61,7 @@ class SAMSegmentEstimator(estimator.Estimator):
 
         if len(boxes) == 0:
             log.warn('No detection was found')
-            return None, None
+            return None
 
         id = np.random.randint(0,len(boxes))
 
@@ -77,7 +77,7 @@ class SAMSegmentEstimator(estimator.Estimator):
  
         if len(sam_result.masks) == 0:
             log.warn('Segmentation failed')
-            return None, None
+            return None
 
         mask = sam_result.masks[0].data.cpu().numpy()
 
@@ -131,6 +131,6 @@ class SAMSegmentEstimator(estimator.Estimator):
         measureit_pcd.end()
         measureit_estimate.end()
 
-        return rvec,tvec
+        return rvec,tvec,reg_p2p
 
 

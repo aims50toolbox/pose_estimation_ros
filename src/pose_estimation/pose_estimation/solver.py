@@ -109,7 +109,7 @@ class SolverSubscriber(Node):
     def data_ready_callback(self, ts, d):
         self.get_logger().info(f'Data is ready: {ts},{len(d)}')
 
-        r,t = self.estimator.estimate(d['color'], d['depth'], d['ci'])
+        result = self.estimator.estimate(d['color'], d['depth'], d['ci'])
 
         if self.estimator.get_diag_img() is not None:
             msg = copy.deepcopy(d['color'])
@@ -121,13 +121,16 @@ class SolverSubscriber(Node):
             msg = self.diag_pcd = PCDToMessage(d['color'].header, pcd, pcd_col)
             self.diag_pcd_publisher.publish(msg)
 
-        if r is not None:
+        if result is not None:
+            r,t,diag = result
             print(f'R: {r.flatten().tolist()}; t: {t.tolist()}')
 
             msg = pe_msgs.Pose()
             msg.header = copy.deepcopy(d['color'].header)
             msg.r = r.flatten().tolist()
             msg.t = t.tolist()
+            msg.inlier_rmse = diag.inlier_rmse
+            msg.fitness = diag.fitness
    
             self.pose_result.publish(msg)
 
