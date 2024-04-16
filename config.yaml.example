@@ -1,1 +1,6 @@
 model_pcd: '/asset/bottle.pcd'
+diag: true
+topics:
+  raw_image: '/camera/color/image_raw'
+  depth_image: '/camera/aligned_depth_to_color/image_raw'
+  camera_info: '/camera/aligned_depth_to_color/camera_info'

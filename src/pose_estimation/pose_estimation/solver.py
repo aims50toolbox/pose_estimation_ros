@@ -53,25 +53,28 @@ class SolverSubscriber(Node):
 
         self.color_subscription = self.create_subscription(
             msgs.Image,
-            '/camera/color/image_raw',
+            config["topics"]["raw_image"],
             self.color_callback,
             10)
         self.depth_subscription = self.create_subscription(
             msgs.Image,
-            '/camera/aligned_depth_to_color/image_raw',
+            config["topics"]["depth_image"],
             self.depth_callback,
             10)
         self.camera_info_subscription = self.create_subscription(
             msgs.CameraInfo,
-            '/camera/aligned_depth_to_color/camera_info',
+            config["topics"]["camera_info"],
             self.camera_info_callback,
             10)
         
-        self.diag_image_publisher = self.create_publisher(msgs.Image,'/pose_estimation/diag/image', 10)
-        self.diag_pcd_publisher = self.create_publisher(msgs.PointCloud2,'/pose_estimation/diag/points', 10)
+        if config['diag'] is True:
+            self.diag_image_publisher = self.create_publisher(msgs.Image,'/pose_estimation/diag/image', 10)
+            self.diag_pcd_publisher = self.create_publisher(msgs.PointCloud2,'/pose_estimation/diag/points', 10)
+
         self.pose_result = self.create_publisher(pe_msgs.Pose,'/pose_estimation/pose',10)
 
         self.data = collections.OrderedDict()
+
 
     def put_data(self,ts,key,data):
         if(ts not in self.data):
@@ -111,15 +114,16 @@ class SolverSubscriber(Node):
 
         result = self.estimator.estimate(d['color'], d['depth'], d['ci'])
 
-        if self.estimator.get_diag_img() is not None:
-            msg = copy.deepcopy(d['color'])
-            msg.data = self.estimator.get_diag_img().flatten().tolist()
-            self.diag_image_publisher.publish(msg)
-        
-        if self.estimator.get_diag_pcd() is not None:
-            pcd,pcd_col = self.estimator.get_diag_pcd()
-            msg = self.diag_pcd = PCDToMessage(d['color'].header, pcd, pcd_col)
-            self.diag_pcd_publisher.publish(msg)
+        if self.config['diag'] is True:
+            if self.estimator.get_diag_img() is not None:
+                msg = copy.deepcopy(d['color'])
+                msg.data = self.estimator.get_diag_img().flatten().tolist()
+                self.diag_image_publisher.publish(msg)
+            
+            if self.estimator.get_diag_pcd() is not None:
+                pcd,pcd_col = self.estimator.get_diag_pcd()
+                msg = self.diag_pcd = PCDToMessage(d['color'].header, pcd, pcd_col)
+                self.diag_pcd_publisher.publish(msg)
 
         if result is not None:
             r,t,diag = result
@@ -148,6 +152,8 @@ def main(args = None):
     print(f'Using {config_path}')
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
+
+    print(f'Config: {config}')
 
     #subscriber = SolverSubscriber(rtdetr_det_estimator.RTDetrDetEstimator(rclpy.logging.get_logger('estimator')))
     subscriber = SolverSubscriber(config,sam_seg_estimator.SAMSegmentEstimator(rclpy.logging.get_logger('estimator'),config))
