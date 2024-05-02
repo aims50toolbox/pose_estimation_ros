@@ -30,6 +30,7 @@ WORKDIR /root/ros_ws
 RUN /bin/bash -c "source /opt/ros/humble/setup.sh && colcon build"
 
 COPY *.pt .
+COPY docker_trick.xml .
 COPY start.sh .
 
 CMD ["/bin/bash", "start.sh"]
