@@ -25,4 +25,7 @@ Subscriptions:
 Publishers:
  - `/pose_estimation/diag/image`: image for diagnostics (`sensor_msgs/Image`)
  - `/pose_estimation/diag/points`: point cloud for diagnostics (`sensor_msgs/PointCloud2`)
- - `/pose_estimation/pose`: pose in user defined format, object2camera transformation (see `src/pe_interface`)
+ - `/pose_estimation/pose`: pose list in user defined format (`pe_interface/msg/PoseList.msg`), object2camera transformation (see `src/pe_interface`)
+
+## Docker trick
+Please note, that ROS2 communcation protocol DDS uses shared memory when nodes are executed on the same machine. To avoid this, we disable shared memory feature (see `docker_trick.xml`).
