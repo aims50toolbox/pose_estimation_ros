@@ -71,7 +71,7 @@ class SolverSubscriber(Node):
             self.diag_image_publisher = self.create_publisher(msgs.Image,'/pose_estimation/diag/image', 10)
             self.diag_pcd_publisher = self.create_publisher(msgs.PointCloud2,'/pose_estimation/diag/points', 10)
 
-        self.pose_result = self.create_publisher(pe_msgs.Pose,'/pose_estimation/pose',10)
+        self.pose_result = self.create_publisher(pe_msgs.PoseList,'/pose_estimation/pose',10)
 
         self.data = collections.OrderedDict()
 
@@ -112,7 +112,7 @@ class SolverSubscriber(Node):
     def data_ready_callback(self, ts, d):
         self.get_logger().info(f'Data is ready: {ts},{len(d)}')
 
-        result = self.estimator.estimate(d['color'], d['depth'], d['ci'])
+        results = self.estimator.estimate(d['color'], d['depth'], d['ci'])
 
         if self.config['diag'] is True:
             if self.estimator.get_diag_img() is not None:
@@ -125,16 +125,18 @@ class SolverSubscriber(Node):
                 msg = self.diag_pcd = PCDToMessage(d['color'].header, pcd, pcd_col)
                 self.diag_pcd_publisher.publish(msg)
 
-        if result is not None:
-            r,t,diag = result
-            print(f'R: {r.flatten().tolist()}; t: {t.tolist()}')
+        if results is not None:
+            def create_pose(r,t,diag):
+                pose = pe_msgs.Pose()
+                pose.r = r.flatten().tolist()
+                pose.t = t.tolist()
+                pose.inlier_rmse = diag.inlier_rmse
+                pose.fitness = diag.fitness
+                return pose
 
-            msg = pe_msgs.Pose()
+            msg = pe_msgs.PoseList()
             msg.header = copy.deepcopy(d['color'].header)
-            msg.r = r.flatten().tolist()
-            msg.t = t.tolist()
-            msg.inlier_rmse = diag.inlier_rmse
-            msg.fitness = diag.fitness
+            msg.poses = [create_pose(r,t,diag) for r,t,diag in results]
    
             self.pose_result.publish(msg)
 
