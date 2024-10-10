@@ -29,7 +29,7 @@ class SAMSegmentEstimator(estimator.Estimator):
         logger.info(f'Load model {self.model_path}')
         ref_pcd = o3d.io.read_point_cloud(self.model_path)
         cnt = np.asarray(ref_pcd.points).shape[0]
-        ref_pcd.colors = o3d.utility.Vector3dVector(np.repeat([[1,0,0]],cnt,axis = 0).astype(np.float32))
+        ref_pcd.colors = o3d.utility.Vector3dVector(np.repeat([[1,0,0]],cnt,axis = 0).astype(np.float64))
         self.ref_pcd = ref_pcd.voxel_down_sample(self.down_sample_size)
 
         logger.info('Estimator is ready')
