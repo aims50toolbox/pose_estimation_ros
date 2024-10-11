@@ -47,7 +47,7 @@ class SAMSegmentEstimator(estimator.Estimator):
         seg_debug_img = color_img.copy()
 
         for id,(mask,result) in enumerate(zip(sam_result.masks,results)):
-            mask = mask.data.numpy()[-1,:,:]
+            mask = mask.data.cpu().numpy()[-1,:,:]
 
             blend = result[2].fitness
             seg_debug_img[mask,:] = (1 - blend) * seg_debug_img[mask,:] + (blend) * np.array([255,0,0])
