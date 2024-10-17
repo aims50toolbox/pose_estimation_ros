@@ -23,13 +23,14 @@ class SAMSegmentEstimator(estimator.Estimator):
         self.bottle_cls = [id for id,name in self.det_model.names.items() if name in ['bottle','cup']]
         self.down_sample_size = 8e-3
         self.model_path = config['model_pcd'] #'/storage/projects/AIMS5.0/stuff/uc6/bottle_large.pcd'
+        self.diag_mode = config['diag']
 
         logger.info(f'Using class ids {self.bottle_cls}')
 
         logger.info(f'Load model {self.model_path}')
         ref_pcd = o3d.io.read_point_cloud(self.model_path)
         cnt = np.asarray(ref_pcd.points).shape[0]
-        ref_pcd.colors = o3d.utility.Vector3dVector(np.repeat([[1,0,0]],cnt,axis = 0).astype(np.float64))
+        ref_pcd.colors = o3d.utility.Vector3dVector(np.repeat([[0,0,1]],cnt,axis = 0).astype(np.float64))
         self.ref_pcd = ref_pcd.voxel_down_sample(self.down_sample_size)
 
         logger.info('Estimator is ready')
@@ -130,69 +131,32 @@ class SAMSegmentEstimator(estimator.Estimator):
         results = [self.estimate_pose_for_mask(pts,color_img,mask.numpy()) for mask in sam_result.masks.data]
         measureit_pcd.end()
 
-        self.diag_img = self.create_diag_image(color_img, sam_result, results)
+        if self.diag_mode is True:
+            # generate diagnostic image
+            self.diag_img = self.create_diag_image(color_img, sam_result, results)
 
-        #def generate_ref_point_cloud(transform):
-        #    ref_pcd_temp = copy.deepcopy(self.ref_pcd)
-        #    return ref_pcd_temp.transform(transform)
+            # generate diagnostic point cloud
+            self.diag_pcd = copy.deepcopy(pts).reshape((-1,3))
+            self.diag_pcd_col = cv2.cvtColor(color_img,cv2.COLOR_RGB2BGR).reshape((-1,3))
 
-        #pcd_all = [generate_ref_point_cloud(reg_res.transformation) for _,_,reg_res in results] # 
-        # TODO: point clouds
+            log.info(f'diag pcd shape: {self.diag_pcd.shape}, diag col shape: {self.diag_pcd_col.shape}')
+            log.info(f'diag pcd dtype: {self.diag_pcd.dtype}, diag col dtype: {self.diag_pcd_col.dtype}')
+
+            for _,_,reg_res in results:
+                ref_pcd_trans = copy.deepcopy(self.ref_pcd).transform(reg_res.transformation)
+                self.diag_pcd = np.concatenate([self.diag_pcd, np.asarray(ref_pcd_trans.points)])
+                self.diag_pcd_col = np.concatenate([self.diag_pcd_col, np.asarray(ref_pcd_trans.colors) * 255])
+            
+
+            log.info(f'diag pcd shape: {self.diag_pcd.shape}, diag col shape: {self.diag_pcd_col.shape}')
+            log.info(f'diag pcd dtype: {self.diag_pcd.dtype}, diag col dtype: {self.diag_pcd_col.dtype}')
 
         results.sort(reverse = True, key = lambda x: x[2].fitness)
         measureit_estimate.end()
 
+        log.info(f'Results: {results}')
+
         return results
 
-
-        # create point cloud
-        # pts = cv2.rgbd.depthTo3d(depth_img, Kdepth)
-        # objpts = pts[mask[-1,:,:],:]
-        # color = color_img[mask[-1,:,:],:]
-
-        # verts = objpts.reshape((-1,3))
-        # idx = ~np.isnan(verts).any(axis=1)
-        # verts = verts[idx,:]
-        # color = color[idx,:]
-
-        # pcd = o3d.geometry.PointCloud()
-        # pcd.points = o3d.utility.Vector3dVector(verts)
-        # pcd.colors = o3d.utility.Vector3dVector(color/255)
-
-        # pcd_ds = pcd.voxel_down_sample(self.down_sample_size)
-
-        # # Rough estimation
-        # reg_p2p = o3d.pipelines.registration.registration_icp(
-        #         self.ref_pcd, pcd_ds, 1, np.identity(4),
-        #         o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-        #         o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=100))
-        # print(reg_p2p)
-        # print("Transformation is:")
-        # print(reg_p2p.transformation)
-        # print("")
-
-        # # Fine estimation
-        # reg_p2p = o3d.pipelines.registration.registration_icp(
-        #         self.ref_pcd, pcd_ds, 0.01, reg_p2p.transformation,
-        #         o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-        #         o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=100))
-        # print(reg_p2p)
-        # print("Transformation is:")
-        # print(reg_p2p.transformation)
-        # print("")
-
-        # tvec = reg_p2p.transformation[0:3,3]
-        # rvec = reg_p2p.transformation[0:3,0:3]
-
-        # ref_pcd_temp = copy.deepcopy(self.ref_pcd)
-        # ref_pcd_temp.transform(reg_p2p.transformation)
-
-        # self.diag_pcd = np.concatenate([verts,np.asarray(ref_pcd_temp.points,dtype=np.float32)])
-        # self.diag_pcd_col = np.concatenate([color,(np.asarray(ref_pcd_temp.colors) * 255).astype(np.uint8) ])
-
-        # measureit_pcd.end()
-        # measureit_estimate.end()
-
-        # return rvec,tvec,reg_p2p
 
 

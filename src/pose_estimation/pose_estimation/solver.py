@@ -12,7 +12,16 @@ import pe_interface.msg as pe_msgs
 import numpy as np
 
 def PCDToMessage(header,pts,clr):
-    print(f'pts: {pts.shape}, clr: {clr.shape}')
+    """
+    Create ROS message from PCD.  
+
+    Arguments:
+        - header: the received original message header to copy into the outgoing message
+        - pts: the pointcloud coordinates, shape (width,height,3) or (num_pts,3). Internally converted to np.float32.
+        - clr: the point colors, shape (width,height,3) or (num_pts,3), range [0,255]. Internally converted to np.uint8.
+    """
+    clr = clr.astype(np.uint8)
+    pts = pts.astype(np.float32)
 
     shape = clr.shape
     clr = np.concatenate([clr,np.zeros((*shape[0:-1],1),dtype=np.uint8)],axis=-1)
