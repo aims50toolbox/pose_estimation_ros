@@ -40,4 +40,4 @@ Publishers:
  - `/pose_estimation/diag/points`: point cloud for diagnostics (`sensor_msgs/PointCloud2`)
  - `/pose_estimation/pose`: pose list in user defined format (`pe_interface/msg/PoseList.msg`), object2camera transformation (see `src/pe_interface`)
 
-If the `diag` is enabled in the configuration, the diagnostic topics will receive diagnostic images and point clouds after each successful detection. Please note, that the point cloud contains the original point cloud restored from the depth image and the fitted reference object (coloured with red).
+If the `diag` is enabled in the configuration, the diagnostic topics will receive diagnostic images and point clouds after each successful detection. Please note, that the point cloud contains the original point cloud restored from the depth image and the fitted reference object (coloured with red). **Note: using diagnostic messages *considerably* increases running time.**
