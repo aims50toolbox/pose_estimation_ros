@@ -1,0 +1,6 @@
+tool:
+    name: "Object Pose Estimation"
+    descr: "The tool provides algorithms for estimating poses of an object for robotic purposes."
+    version: 0.1.0
+deploy:
+    mode: "none"
