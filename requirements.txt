@@ -3,5 +3,5 @@ open3d==0.16.0
 opencv-python==4.10.0.84
 opencv-contrib-python==4.10.0.84
 numpy==1.24.4
-rosbags==0.10.4
+rosbags==0.9.23
 pyyaml==5.4.1
