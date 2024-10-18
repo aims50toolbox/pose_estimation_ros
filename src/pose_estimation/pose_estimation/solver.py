@@ -3,7 +3,6 @@ from rclpy.node import Node
 from std_msgs.msg import String
 import sensor_msgs.msg as msgs
 import collections
-import rtdetr_det_estimator
 import sam_seg_estimator
 import yaml
 import copy
