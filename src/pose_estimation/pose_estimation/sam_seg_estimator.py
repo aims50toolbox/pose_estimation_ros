@@ -128,7 +128,7 @@ class SAMSegmentEstimator(estimator.Estimator):
         # create point cloud
         measureit_pcd = self.measureit("pointcloud matching")
         pts = cv2.rgbd.depthTo3d(depth_img, Kdepth)
-        results = [self.estimate_pose_for_mask(pts,color_img,mask.numpy()) for mask in sam_result.masks.data]
+        results = [self.estimate_pose_for_mask(pts,color_img,mask.numpy()) for mask in sam_result.masks.data.cpu()]
         measureit_pcd.end()
 
         if self.diag_mode is True:
