@@ -12,7 +12,6 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('lib/' + package_name,[
             package_name + '/estimator.py',
-            package_name + '/rtdetr_det_estimator.py',
             package_name + '/sam_seg_estimator.py',
             ])
     ],
