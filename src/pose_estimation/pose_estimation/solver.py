@@ -82,7 +82,9 @@ class SolverSubscriber(Node):
         self.pose_result = self.create_publisher(pe_msgs.PoseList,'/pose_estimation/pose',10)
 
         self.data = collections.OrderedDict()
-
+        self.lease_time = config.get('queue_lease_time_s',10)
+        self.get_logger().info(f'Queue lease time: {self.lease_time}')
+    
 
     def put_data(self,ts,key,data):
         if(ts not in self.data):
@@ -96,7 +98,10 @@ class SolverSubscriber(Node):
                 del self.data[k]
                 break
 
-        # TODO: Remove all earlier entries
+        # Remove old entries (which are older than ts - lease_time)
+        time_limit = ts - self.lease_time * 1000000000
+        for k in [k for k in self.data.keys() if k < time_limit]:
+            del self.data[k]
 
 
     def color_callback(self, msg):

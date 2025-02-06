@@ -2,36 +2,54 @@ FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
 WORKDIR /root
 
 RUN apt update && \
-        apt -y install python3-pip curl
+        apt -y install python3.11 python3-pip curl wget
 
-RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+RUN mkdir -p ~/miniconda3
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+RUN bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+RUN rm ~/miniconda3/miniconda.sh
 
 ENV TZ=Europe/Budapest \
     DEBIAN_FRONTEND=noninteractive
 
 RUN apt update && \
         apt -y install \
-        ros-humble-ros-base \
-        ros-humble-rviz2 \
-        python3-colcon-common-extensions \
         libgl-dev \
      && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
+RUN . ~/miniconda3/bin/activate && \
+        conda install python=3.11 
 
-RUN echo ". /opt/ros/humble/setup.bash" >> /root/.bashrc
+RUN . ~/miniconda3/bin/activate && \
+        conda install mamba -c conda-forge
+
+RUN . ~/miniconda3/bin/activate && \
+        conda config --env --add channels conda-forge && \
+        conda config --env --add channels robostack-staging && \
+        conda config --env --add channels robostack-jazzy 
+
+RUN . ~/miniconda3/bin/activate && \
+        mamba install ros-jazzy-ros-base ros-jazzy-rviz2
+
+RUN . ~/miniconda3/bin/activate && \
+        mamba install compilers cmake pkg-config make ninja colcon-common-extensions catkin_tools rosdep
+
+RUN echo ". ~/miniconda3/bin/activate" >> /root/.bashrc
+
+COPY requirements.txt .
+RUN bash -i -c "pip3 install -r requirements.txt"
 
 RUN mkdir -p ros_ws/src
 COPY src ros_ws/src
 
 WORKDIR /root/ros_ws
-RUN /bin/bash -c "source /opt/ros/humble/setup.sh && colcon build"
 
 COPY *.pt .
 COPY docker_trick.xml .
 COPY start.sh .
 
-CMD ["/bin/bash", "start.sh"]
+RUN /bin/bash -i -c "colcon build"
+
+#CMD ["/bin/bash"]
+CMD ["/bin/bash" , "start.sh"]
 EXPOSE 80
